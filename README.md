@@ -8,4 +8,4 @@ core of initial shell.nix borrowed from https://gist.github.com/Arian04/bea169c9
 
 
 ## maintenance
-- update the nixpkgs pin by running `lon update --commit nixpkgs`
+- update the nixpkgs pin by running `lon --directory nix update --commit nixpkgs`

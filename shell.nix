@@ -1,5 +1,5 @@
 let
-  sources = import ./lon.nix;
+  sources = import ./nix/lon.nix;
   pkgs = import sources.nixpkgs { };
 
   fhs = pkgs.buildFHSEnv {
