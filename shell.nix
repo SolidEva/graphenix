@@ -1,9 +1,6 @@
 let
-  nixpkgs = builtins.fetchGit {
-          url = "https://github.com/nixos/nixpkgs/";
-          ref = "nixos-25.11";
-          };
-  pkgs = import nixpkgs {};
+  sources = import ./lon.nix;
+  pkgs = import sources.nixpkgs { };
 
   fhs = pkgs.buildFHSEnv {
     name = "android-env";
