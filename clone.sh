@@ -16,13 +16,19 @@ if [ ! -f ~/.ssh/grapheneos_allowed_signers ]; then
   exit 1
 fi
 
-mkdir grapheneos-$TAG
-cd grapheneos-$TAG
-repo init -u https://github.com/GrapheneOS/platform_manifest.git -b refs/tags/$TAG
+if [ ! -f grapheneos-$TAG ]; then
+  mkdir grapheneos-$TAG
+  cd grapheneos-$TAG
+  repo init -u https://github.com/GrapheneOS/platform_manifest.git -b refs/tags/$TAG
 
-cd .repo/manifests
-git config gpg.ssh.allowedSignersFile ~/.ssh/grapheneos_allowed_signers
-git verify-tag $(git describe)
-cd ../..
+  cd .repo/manifests
+  git config gpg.ssh.allowedSignersFile ~/.ssh/grapheneos_allowed_signers
+  git verify-tag $(git describe)
+  cd ../..
+else
+  cd grapheneos-$TAG
+fi
 
 repo sync -j8
+
+cd ../
