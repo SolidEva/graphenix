@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -ex
+
 # build a grapheneos release, assumes the sources for a tagged release are already downloaded
 
 if [ -z "$1" ]; then
@@ -17,12 +19,11 @@ fi
 TAG=$1
 CODENAME=$2
 
-
-cd grapheneos=$TAG || echo "source clone does not exist at grapheneos-$TAG, run 'clone.sh $TAG' first"; exit 1
+cd grapheneos-$TAG || $(echo "source clone does not exist at grapheneos-$TAG, run 'clone.sh $TAG' first"; exit 1)
 
 source build/envsetup.sh
 yarn --cwd vendor/adevtool/ install
-adevtool generate-all -d $CODENAME
+./vendor/adevtool/bin/run generate-all -d $CODENAME
 lunch $CODENAME-cur-user
 
 rm -r out

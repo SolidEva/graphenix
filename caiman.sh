@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -xe
+
 DEVICE=caiman
 
 # build grapheneos for tokay at a specific tagged release
