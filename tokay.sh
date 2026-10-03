@@ -18,9 +18,9 @@ TAG=$1
 ./build.sh $TAG $DEVICE
 
 mkdir -p grapheneos-$TAG/keys/
-cp -a keys/$DEVICE grapheneos-$TAG/keys/$DEVICE
+cp -a keys/$DEVICE/ grapheneos-$TAG/keys/$DEVICE
 cd grapheneos-$TAG
-# BUILD_NUMBER comes from the `source build/envsetup.sh` in build.sh
+BUILD_NUMBER=$(cat out/soong/build_number.txt)
 script/generate-release.sh $DEVICE $BUILD_NUMBER
 cd ../
-echo "signed images available in grapheneos-${BUILD_NUMBER}/releases/${BUILD_NUMBER}/release-${DEVICE}-${BUILD_NUMBER}"
+echo "signed images available in grapheneos-${TAG}/releases/${BUILD_NUMBER}/release-${DEVICE}-${BUILD_NUMBER}"
