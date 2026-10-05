@@ -16,6 +16,6 @@ pkgs.stdenv.mkDerivation {
   ];
   shellHook = ''
     echo "run buildGrapheneOS to build images"
-    exec androidFHS
+    exec androidFHSbash
   '';
 }

@@ -1,13 +1,19 @@
 { pkgs, ... }:
 let
   allowed_signers = ./allowed_signers;
+
+  env = import ./env.nix { inherit pkgs; };
 in
 rec {
 
     buildGrapheneOS =
       pkgs.writeShellApplication {
         name = "buildGrapheneOS";
-        runtimeInputs = [ buildGrapheneOS-unwrapped ];
+        runtimeInputs = [ (env.androidFHS {
+                            commandPkg = buildGrapheneOS-unwrapped;
+                            command = ''buildGrapheneOS-unwrapped "$@"'';
+                          })
+                        ];
         text = ''
           set -e
 
@@ -16,7 +22,7 @@ rec {
           echo "Enter the encryption password for your signing keys:"
           systemd-ask-password -n | systemd-creds --user encrypt --name=signingkeyspassword -p - "$CRED_STORE"/signingkeyspassword.cred
 
-          systemd-run --user --wait --property=LoadCredentialEncrypted=signingkeyspassword:"$CRED_STORE"/signingkeyspassword.cred buildGrapheneOS-unwrapped "$@"
+          systemd-run --user --wait --property=LoadCredentialEncrypted=signingkeyspassword:"$CRED_STORE"/signingkeyspassword.cred --same-dir androidFHSbuildGrapheneOS-unwrapped "$@"
           '';
       };
   
