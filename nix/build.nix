@@ -16,7 +16,7 @@ rec {
           echo "Enter the encryption password for your signing keys:"
           systemd-ask-password -n | systemd-creds --user encrypt --name=signingkeyspassword -p - "$CRED_STORE"/signingkeyspassword.cred
 
-          systemd-run --user --pipe --wait --property=LoadCredentialEncrypted=signingkeyspassword:"$CRED_STORE"/signingkeyspassword.cred buildGrapheneOS-unwrapped "$@"
+          systemd-run --user --wait --property=LoadCredentialEncrypted=signingkeyspassword:"$CRED_STORE"/signingkeyspassword.cred buildGrapheneOS-unwrapped "$@"
           '';
       };
   
