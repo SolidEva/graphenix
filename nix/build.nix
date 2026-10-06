@@ -102,7 +102,7 @@ rec {
         echo "building complete"
 
         mkdir -p keys/
-        cp -a $WORKDIR/keys/$CODENAME keys/$CODENAME
+        cp -a $WORKDIR/keys/$CODENAME keys/
         BUILD_NUMBER=$(cat out/soong/build_number.txt)
         # the grapheneos decrypt keys script consumes the password if set in env
         set +x
