@@ -5,6 +5,7 @@
     targetPkgs = pkgs:
       with pkgs; [
         commandPkg
+        bashInteractive
         android-tools
         libxcrypt-legacy # libcrypt.so.1
         freetype # libfreetype.so.6

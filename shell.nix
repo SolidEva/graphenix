@@ -9,7 +9,7 @@ pkgs.stdenv.mkDerivation {
   name = "android-env-shell";
   nativeBuildInputs = [
     (env.androidFHS {
-      commandPkg = pkgs.bash;
+      commandPkg = pkgs.bashInteractive;
       command = "bash";
     })
     (build.buildGrapheneOS)

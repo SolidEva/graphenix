@@ -3,6 +3,24 @@ let
   allowed_signers = ./allowed_signers;
 
   env = import ./env.nix { inherit pkgs; };
+
+  # we need bashInteractive for various commands in the grapehen envsetup.sh (like complete)
+  # by default, writeShellScriptBin uses bash non interactive it seems
+  writeBashInteractiveBin =
+    name: text:
+    pkgs.writeTextFile {
+      inherit name;
+      executable = true;
+      destination = "/bin/${name}";
+      text = ''
+        #!${pkgs.bashInteractive}/bin/bash
+        ${text}
+      '';
+      checkPhase = ''
+        ${pkgs.stdenv.shellDryRun} "$target"
+      '';
+      meta.mainProgram = name;
+    };
 in
 rec {
 
@@ -14,20 +32,19 @@ rec {
                             command = ''buildGrapheneOS-unwrapped "$@"'';
                           })
                         ];
+        bashOptions = [];
         text = ''
           set -e
-
           CRED_STORE=$(mktemp -d)
 
           echo "Enter the encryption password for your signing keys:"
           systemd-ask-password -n | systemd-creds --user encrypt --name=signingkeyspassword -p - "$CRED_STORE"/signingkeyspassword.cred
-
           systemd-run --user --wait --property=LoadCredentialEncrypted=signingkeyspassword:"$CRED_STORE"/signingkeyspassword.cred --same-dir androidFHSbuildGrapheneOS-unwrapped "$@"
           '';
       };
   
     buildGrapheneOS-unwrapped = 
-      pkgs.writeShellScriptBin "buildGrapheneOS-unwrapped" ''
+      writeBashInteractiveBin "buildGrapheneOS-unwrapped" ''
         set -xe
 
         if [ -z "$1" ]; then
@@ -70,6 +87,7 @@ rec {
         source build/envsetup.sh
         yarn --cwd vendor/adevtool/ install
         ./vendor/adevtool/bin/run generate-all -d $CODENAME
+
         lunch $CODENAME-cur-user
 
         if [[ "$CODENAME" =~ ^(oriole|raven|bluejay)$ ]]; then
