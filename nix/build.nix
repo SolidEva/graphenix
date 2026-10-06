@@ -105,7 +105,9 @@ rec {
         cp -a $WORKDIR/keys/$CODENAME keys/$CODENAME
         BUILD_NUMBER=$(cat out/soong/build_number.txt)
         # the grapheneos decrypt keys script consumes the password if set in env
-        password=$(systemd-creds --user cat signingkeyspassword)
+        set +x
+        export password=$(systemd-creds --user cat signingkeyspassword)
+        set -x
         script/generate-release.sh $CODENAME $BUILD_NUMBER
         echo "signed images available in grapheneos/releases/$BUILD_NUMBER/release-$CODENAME-$BUILD_NUMBER"
       '';
