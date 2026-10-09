@@ -108,6 +108,18 @@ rec {
         set +x
         export password=$(systemd-creds --user cat signingkeyspassword)
         set -x
+
+        # the generate-release script doesnt decrypt the ssh signing key for us
+        # and passing the key to ssh-keygen inside the script is not straightforward
+        # so remove the ssh signing key so generate-release doesnt try to use it
+        # signing the .zip is less important since its most useful
+        # when distributing .zip files
+        # additionally, the real protection comes from the other signing keys
+        # since those are what are used to validate updates on device
+        # TODO create a patch to generate-release to let us
+        #      pass the ssh key password in easily
+        rm keys/$CODENAME/id_ed25519
+
         script/generate-release.sh $CODENAME $BUILD_NUMBER
         echo "signed images available in grapheneos/releases/$BUILD_NUMBER/release-$CODENAME-$BUILD_NUMBER"
       '';
