@@ -24,6 +24,47 @@ let
 in
 rec {
 
+    latestRelease = pkgs.writers.writePython3Bin "latest" {
+      libraries = [ pkgs.python3Packages.requests pkgs.python3Packages.click pkgs.python3Packages.feedparser ];
+    } ''
+      import requests
+      import click
+      import feedparser
+
+
+      def productname(codename):
+          r = requests.get('https://grapheneos.org/build')
+          for line in r.text.split("</li>"):
+              if codename in line:
+                  return line.lstrip(f"<li>{codename} (").rstrip(")").strip()
+          raise Exception(f"could not find product name for codename {codename}")
+
+
+      @click.command(no_args_is_help=True)
+      @click.option('--codename',
+                    help='the codename aka build target for devices can be \
+                    found here https://grapheneos.org/build#build-targets')
+      def run(codename):
+          pname = productname(codename)
+          # print(pname)
+          parser = feedparser.parse("https://grapheneos.org/releases.atom")
+          for entry in parser.entries:
+              release = entry.title
+              supported_devices = (entry.content[0]["value"]
+                                        .split(f"{release}</a> (")[1]
+                                        .split("Changes since the")[0]
+                                        .rstrip(")</li></ul><p>")
+                                        .split(", "))
+              if pname in supported_devices:
+                  print(release)
+                  return 0
+          return 1
+
+
+      if __name__ == '__main__':
+          run()
+    '';
+
     buildGrapheneOS =
       pkgs.writeShellApplication {
         name = "buildGrapheneOS";
@@ -67,6 +108,11 @@ rec {
         if [ ! -d "$WORKDIR/keys/$CODENAME" ]; then
           echo "keys dir $WORKDIR/keys/$CODENAME does not exist"
           exit 1
+        fi
+
+        if rg -m1 "$TAG" $CODENAME_built_tags ; then
+          echo "already built $TAG for $CODENAME, not rebuilding"
+          exit 0
         fi
 
         mkdir -p grapheneos
@@ -122,6 +168,9 @@ rec {
 
         script/generate-release.sh $CODENAME $BUILD_NUMBER
         echo "signed images available in grapheneos/releases/$BUILD_NUMBER/release-$CODENAME-$BUILD_NUMBER"
+
+        echo "Completed build of GrapheneOS $TAG for $CODENAME"
+        echo "$TAG" >> $WORKDIR/$CODENAME_built_tags
       '';
   
 }

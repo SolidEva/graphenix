@@ -13,6 +13,7 @@ pkgs.stdenv.mkDerivation {
       command = "bash";
     })
     (build.buildGrapheneOS)
+    (build.latestRelease)
   ];
   shellHook = ''
     echo "run buildGrapheneOS to build images"
