@@ -20,7 +20,7 @@ let
     fi
     release=$(${lib.getExe latestRelease} --codename $1)
     echo "found release $release for device $1"
-    ${buildGrapheneOSandroidFHS} $1 $release $2
+    ${lib.getExe buildGrapheneOSandroidFHS} $1 $release $2
   '';
 in
 
@@ -187,7 +187,7 @@ in
             ExecStart = (
               lib.strings.join " "
                 [
-                  signGrapheneOSandroidFHS
+                  (lib.getExe signGrapheneOSandroidFHS)
                   name
                 ]
             );
