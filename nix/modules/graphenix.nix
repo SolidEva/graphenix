@@ -122,6 +122,7 @@ in
           wantedBy = [
             "graphenix.target"
           ];
+          before = [ "graphenix-sign.target" ];
           serviceConfig = {
             Type = "exec";
             User = cfg.user;
@@ -167,14 +168,13 @@ in
       lib.mapAttrs' (name: devicecfg: {
         name = "graphenix-sign-${name}";
         value = {
-          description = "graphenix: GrapheneOS auto builder";
-          after = [ "graphenix-build.service" ];
-          requires = [ "graphenix-build.service" ];
-          wantedBy = [
-            "graphenix.target"
-          ];
+          description = "graphenix signer";
+          after = [ "graphenix-sign.target" ];
+          requires = [ "graphenix-sign.target" ];
+          bindsTo = [ "graphenix-sign.target" ];
+          wantedBy = [ "graphenix-sign.target" ];
           serviceConfig = {
-            Type = "exec";
+            Type = "oneshot";
             User = cfg.user;
             Group = cfg.group;
             Restart = "no";
@@ -188,9 +188,6 @@ in
                   name
                 ]
             );
-
-            # limit the grapheneos signing to run 4 at a time
-            Slice = "graphenix.slice";
 
             # Security options:
             NoNewPrivileges = true;
@@ -233,6 +230,10 @@ in
 
     systemd.targets.graphenix = {
       description = "dummy target for the timer, allows the actual jobs to get triggered as well";
+    };
+
+    systemd.targets.graphenix-sign = {
+      description = "dummy target to indicate the signing jobs can start";
     };
 
     systemd.slices.graphenix = {
