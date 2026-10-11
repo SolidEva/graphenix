@@ -24,7 +24,7 @@ let
 in
 rec {
 
-    latestRelease = (pkgs.writers.writePython3Bin "latestRelease" {
+    latestRelease = pkgs.writers.writePython3Bin "latestRelease" {
       libraries = [ pkgs.python3Packages.requests pkgs.python3Packages.click pkgs.python3Packages.feedparser ];
     } ''
       import requests
@@ -45,25 +45,29 @@ rec {
                     help='the codename aka build target for devices can be \
                     found here https://grapheneos.org/build#build-targets')
       def run(codename):
-          pname = productname(codename)
-          # print(pname)
+          productnames = []
+          for device in codename.split(","):
+              productnames.append(productname(device))
+
           parser = feedparser.parse("https://grapheneos.org/releases.atom")
-          for entry in parser.entries:
-              release = entry.title
-              supported_devices = (entry.content[0]["value"]
-                                        .split(f"{release}</a> (")[1]
-                                        .split("Changes since the")[0]
-                                        .rstrip(")</li></ul><p>")
-                                        .split(", "))
-              if pname in supported_devices:
-                  print(release)
-                  return 0
-          return 1
+          release = parser.entries[0].title
+          supported = (parser.entries[0]
+                       .content[0]["value"]
+                       .split(f"{release}</a> (")[1]
+                       .split("Changes since the")[0]
+                       .rstrip(")</li></ul><p>")
+                       .split(", "))
+
+          for pname in productnames:
+              if pname not in supported:
+                  return 1
+          print(release)
+          return 0
 
 
       if __name__ == '__main__':
           run()
-    '');
+    '';
 
     buildGrapheneOS =
       pkgs.writeShellApplication {
