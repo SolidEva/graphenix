@@ -21,6 +21,15 @@ let
       '';
       meta.mainProgram = name;
     };
+
+  patchUpdater = pkgs.writers.writePython3Bin "patchUpdater" {} ''
+      import fileinput
+      import os
+      for line in fileinput.input("packages/apps/Updater/res/values/config.xml",
+                                  inplace=True):
+          print(line.replace("https://releases.grapheneos.org/",
+                os.getenv("UPDATE_SERVER")))
+    '';
 in
 rec {
 
@@ -90,13 +99,13 @@ rec {
 
     buildGrapheneOSandroidFHS = (env.androidFHS {
                             commandPkg = buildGrapheneOS-unwrapped;
-                            command = ''buildGrapheneOS-unwrapped "$@"'';
+                            command = ''buildGrapheneOS-unwrapped'';
                             name = "buildGrapheneOSandroidFHS";
                           });
 
     signGrapheneOSandroidFHS = (env.androidFHS {
                               commandPkg = signGrapheneOS-unwrapped;
-                              command = ''signGrapheneOS-unwrapped "$@"'';
+                              command = ''signGrapheneOS-unwrapped'';
                               name = "signGrapheneOSandroidFHS";
                           });
 
@@ -116,22 +125,26 @@ rec {
           exit 1
         fi
 
+        echo "all args: $@"
+
         CODENAMES=$1
-        devices=($${CODENAMES//,/ })
         TAG=$2
         WORKDIR=$(pwd)
 
-        if ! [ -z "$3" ]; then
-          UPDATE_SERVER=$3
+        if [ -z "$3" ]; then
+          echo "not setting update server"
+        else
+          export UPDATE_SERVER=$3
           echo "Update server is set to $UPDATE_SERVER"
         fi
 
-        for device in $${devices[@]}; do
+        devices=(''${CODENAMES//,/ })
+
+        for device in ''${devices[@]}; do
           if [ ! -d "$WORKDIR/keys/$device" ]; then
             echo "keys dir $WORKDIR/keys/$device does not exist"
             exit 1
           fi
-
         done
 
         mkdir -p grapheneos
@@ -153,12 +166,7 @@ rec {
 
         if ! [ -z $UPDATE_SERVER ]; then
           echo "setting update server to $UPDATE_SERVER"
-          ${pkgs.python3}/bin/python -c '
-            import fileinput
-            for line in fileinput.input("packages/apps/Updater/res/values/config.xml", inplace=True):
-                print line.replace("https://releases.grapheneos.org/",os.getenv("UPDATE_SERVER")
-),
-            '
+          ${pkgs.lib.getExe patchUpdater}
           if ${pkgs.ripgrep}/bin/rg -m1 "https://releases.grapheneos.org/" packages/apps/Updater/res/values/config.xml ; then
             echo "the offical update server is still set in the updater, refusing to build!"
             exit 1
@@ -171,16 +179,16 @@ rec {
         source build/envsetup.sh
         yarn --cwd vendor/adevtool/ install
 
-        for device in $${devices[@]}; do
+        for device in ''${devices[@]}; do
           # must clean out/ between each device
           rm -rf out/
 
-          if rg -m1 "$TAG" $${device}_built_tags ; then
+          if ${pkgs.ripgrep}/bin/rg -m1 "$TAG" ''${device}_built_tags ; then
             echo "already built $TAG for $device, not rebuilding"
             continue
           fi
 
-          ./vendor/adevtool/bin/run generate-all -d $CODENAME
+          ./vendor/adevtool/bin/run generate-all -d $device
 
           lunch $device-cur-user
 
@@ -191,7 +199,6 @@ rec {
             m vendorbootimage vendorkernelbootimage target-files-package otatools-package
           fi
           script/finalize.sh
-
         done
         
         echo $TAG > out/tag.txt
@@ -217,7 +224,7 @@ rec {
           exit 1
         fi
 
-        if rg -m1 "$TAG" $CODENAME_built_tags ; then
+        if ${pkgs.ripgrep}/bin/rg -m1 "$TAG" $CODENAME_built_tags ; then
           echo "already signed $TAG for $CODENAME, not signing new build"
           exit 0
         fi

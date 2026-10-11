@@ -13,6 +13,7 @@ let
   latestRelease = (import ../build.nix { inherit pkgs; }).latestRelease;
 
   buildScript = pkgs.writeShellScript "buildScript" ''
+    set -xe
     if [ -z "$1" ]; then
       echo "Usage: ./buildScript.sh <device codename>"
       echo "the codename aka build target for devices can be found here https://grapheneos.org/build#build-targets"
@@ -116,6 +117,13 @@ in
     };
 
     systemd = {
+      tmpfiles.settings.graphenixBuildDirs = {
+        "${cfg.dataDir}"."e" = {
+          mode = "700";
+          inherit (cfg) user group;
+        };
+      };
+
       services = {
         graphenix-build =  {
           description = "graphenix: GrapheneOS auto builder";
@@ -123,6 +131,9 @@ in
             "graphenix.target"
           ];
           before = [ "graphenix-sign.target" ];
+          environment = {
+            HOME = cfg.dataDir;
+          };
           serviceConfig = {
             Type = "exec";
             User = cfg.user;
@@ -141,27 +152,30 @@ in
             );
 
             # Security options:
-            NoNewPrivileges = true;
-            CapabilityBoundingSet = [ "" ];
-            SystemCallArchitectures = "native";
-            RestrictAddressFamilies = [
-              "AF_UNIX"
-              "AF_INET"
-              "AF_INET6"
-            ];
-            RestrictRealtime = true;
-            RestrictSUIDSGID = true;
-            ProtectControlGroups = true;
-            ProtectClock = true;
-            ProtectHostname = true;
-            ProtectKernelLogs = true;
-            ProtectKernelModules = true;
-            ProtectKernelTunables = true;
-            ProtectSystem = true;
-            LockPersonality = true;
-            PrivateTmp = true;
-            PrivateUsers = true;
-            RemoveIPC = true;
+            # one of these causes nsjail issues
+            # NoNewPrivileges = true;
+            # SystemCallArchitectures = "native";
+            # RestrictAddressFamilies = [
+            #   "AF_UNIX"
+            #   "AF_INET"
+            #   "AF_INET6"
+            # ];
+            # PrivateTmp = true;
+            # RestrictRealtime = true;
+            # ProtectClock = true;
+            # ProtectHostname = true;
+            # RemoveIPC = true;
+
+            # we can probably use these?
+            # RestrictSUIDSGID = true;
+            # ProtectControlGroups = true;
+            # ProtectKernelLogs = true;
+            # ProtectKernelModules = true;
+            # ProtectKernelTunables = true;
+            # ProtectSystem = true;
+            # LockPersonality = true;
+            # CapabilityBoundingSet = [ "" ];
+            # PrivateUsers = true;
           };
         };
       } //

@@ -26,6 +26,7 @@
         gnumake
         gnupg
         gperf
+        openssh
         openssl
         imagemagick
         jdk11
