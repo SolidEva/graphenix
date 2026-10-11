@@ -89,19 +89,24 @@ rec {
         set -xe
 
         if [ -z "$1" ]; then
-          echo "Usage: ./buildGrapheneOS.sh <device codename> <grapheneos-release-tag-name>"
+          echo "Usage: ./buildGrapheneOS.sh <device codename> <grapheneos-release-tag-name> [optional update server hostname]"
           echo "the codename aka build target for devices can be found here https://grapheneos.org/build#build-targets"
           exit 1
         fi
 
         if [ -z "$2" ]; then
-          echo "Usage: ./buildGrapheneOS.sh <device codename> <grapheneos-release-tag-name>"
+          echo "Usage: ./buildGrapheneOS.sh <device codename> <grapheneos-release-tag-name> [optional update server hostname]"
           echo "the tags can be found here https://grapheneos.org/releases"
           exit 1
         fi
 
         CODENAME=$1
         TAG=$2
+
+        if ! [ -z "$3" ]; then
+          UPDATE_SERVER=$3
+          echo "Update server is set to $UPDATE_SERVER"
+        fi
 
         WORKDIR=$(pwd)
 
@@ -129,6 +134,23 @@ rec {
         repo sync -j8 --force-sync
 
         echo "repo at tag $TAG cloned and synced"
+
+        if ! [ -z $UPDATE_SERVER ]; then
+          echo "setting update server to $UPDATE_SERVER"
+          ${pkgs.python3}/bin/python -c '
+            import fileinput
+            for line in fileinput.input("packages/apps/Updater/res/values/config.xml", inplace=True):
+                print line.replace("https://releases.grapheneos.org/",os.getenv('UPDATE_SERVER')
+),
+            '
+          if ${pkgs.ripgrep}/bin/rg -m1 "https://releases.grapheneos.org/" packages/apps/Updater/res/values/config.xml ; then
+            echo "the offical update server is still set in the updater, refusing to build!"
+            exit 1
+          fi
+
+          # includes the updater app
+          export OFFICIAL_BUILD=true
+        fi
 
         source build/envsetup.sh
         yarn --cwd vendor/adevtool/ install
@@ -170,7 +192,7 @@ rec {
         echo "signed images available in grapheneos/releases/$BUILD_NUMBER/release-$CODENAME-$BUILD_NUMBER"
 
         echo "Completed build of GrapheneOS $TAG for $CODENAME"
-        echo "$TAG" >> $WORKDIR/$CODENAME_built_tags
+        echo "$TAG" >> $WORKDIR/$\{CODENAME\}_built_tags
       '';
   
 }
