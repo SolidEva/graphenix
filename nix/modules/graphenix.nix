@@ -148,7 +148,6 @@ in
               "AF_INET"
               "AF_INET6"
             ];
-            RestrictNamespaces = true;
             RestrictRealtime = true;
             RestrictSUIDSGID = true;
             ProtectControlGroups = true;
@@ -202,7 +201,6 @@ in
               "AF_INET"
               "AF_INET6"
             ];
-            RestrictNamespaces = true;
             RestrictRealtime = true;
             RestrictSUIDSGID = true;
             ProtectControlGroups = true;
