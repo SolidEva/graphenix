@@ -1,7 +1,7 @@
 { pkgs, ... }:
 {
-  androidFHS = { commandPkg, command }: pkgs.buildFHSEnv {
-    name = "androidFHS${command}";
+  androidFHS = { commandPkg, command, name }: pkgs.buildFHSEnv {
+    inherit name;
     targetPkgs = pkgs:
       with pkgs; [
         commandPkg

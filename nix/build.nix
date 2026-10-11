@@ -68,10 +68,8 @@ rec {
     buildGrapheneOS =
       pkgs.writeShellApplication {
         name = "buildGrapheneOS";
-        runtimeInputs = [ (env.androidFHS {
-                            commandPkg = buildGrapheneOS-unwrapped;
-                            command = ''buildGrapheneOS-unwrapped "$@"'';
-                          })
+        runtimeInputs = [ buildGrapheneOSandroidFHS
+                          signGrapheneOSandroidFHS
                         ];
         bashOptions = [];
         text = ''
@@ -80,16 +78,30 @@ rec {
 
           echo "Enter the encryption password for your signing keys:"
           systemd-ask-password -n | systemd-creds --user encrypt --name=signingkeyspassword -p - "$CRED_STORE"/signingkeyspassword.cred
-          systemd-run --user --wait --property=LoadCredentialEncrypted=signingkeyspassword:"$CRED_STORE"/signingkeyspassword.cred --same-dir androidFHSbuildGrapheneOS-unwrapped "$@"
+          systemd-run --user --wait --same-dir ${buildGrapheneOSandroidFHS.name} "$@"
+          systemd-run --user --wait --property=LoadCredentialEncrypted=signingkeyspassword:"$CRED_STORE"/signingkeyspassword.cred --same-dir ${signGrapheneOSandroidFHS.name} "$@"
           '';
       };
   
+
+    buildGrapheneOSandroidFHS = (env.androidFHS {
+                            commandPkg = buildGrapheneOS-unwrapped;
+                            command = ''buildGrapheneOS-unwrapped "$@"'';
+                            name = "buildGrapheneOSandroidFHS";
+                          });
+
+    signGrapheneOSandroidFHS = (env.androidFHS {
+                              commandPkg = signGrapheneOS-unwrapped;
+                              command = ''signGrapheneOS-unwrapped "$@"'';
+                              name = "signGrapheneOSandroidFHS";
+                          });
+
     buildGrapheneOS-unwrapped = 
       writeBashInteractiveBin "buildGrapheneOS-unwrapped" ''
         set -xe
 
         if [ -z "$1" ]; then
-          echo "Usage: ./buildGrapheneOS.sh <device codename> <grapheneos-release-tag-name> [optional update server hostname]"
+          echo "Usage: ./buildGrapheneOS.sh <comma seperated device codenames (ex: tokay,caiman,oriale )> <grapheneos-release-tag-name> [optional update server hostname]"
           echo "the codename aka build target for devices can be found here https://grapheneos.org/build#build-targets"
           exit 1
         fi
@@ -100,28 +112,28 @@ rec {
           exit 1
         fi
 
-        CODENAME=$1
+        CODENAMES=$1
+        devices=($${CODENAMES//,/ })
         TAG=$2
+        WORKDIR=$(pwd)
 
         if ! [ -z "$3" ]; then
           UPDATE_SERVER=$3
           echo "Update server is set to $UPDATE_SERVER"
         fi
 
-        WORKDIR=$(pwd)
+        for device in $${devices[@]}; do
+          if [ ! -d "$WORKDIR/keys/$device" ]; then
+            echo "keys dir $WORKDIR/keys/$device does not exist"
+            exit 1
+          fi
 
-        if [ ! -d "$WORKDIR/keys/$CODENAME" ]; then
-          echo "keys dir $WORKDIR/keys/$CODENAME does not exist"
-          exit 1
-        fi
-
-        if rg -m1 "$TAG" $CODENAME_built_tags ; then
-          echo "already built $TAG for $CODENAME, not rebuilding"
-          exit 0
-        fi
+        done
 
         mkdir -p grapheneos
         cd grapheneos
+
+        # must clean out/ between each device
         rm -rf out/
 
         repo init -u https://github.com/GrapheneOS/platform_manifest.git -b refs/tags/$TAG
@@ -140,7 +152,7 @@ rec {
           ${pkgs.python3}/bin/python -c '
             import fileinput
             for line in fileinput.input("packages/apps/Updater/res/values/config.xml", inplace=True):
-                print line.replace("https://releases.grapheneos.org/",os.getenv('UPDATE_SERVER')
+                print line.replace("https://releases.grapheneos.org/",os.getenv("UPDATE_SERVER")
 ),
             '
           if ${pkgs.ripgrep}/bin/rg -m1 "https://releases.grapheneos.org/" packages/apps/Updater/res/values/config.xml ; then
@@ -154,20 +166,59 @@ rec {
 
         source build/envsetup.sh
         yarn --cwd vendor/adevtool/ install
-        ./vendor/adevtool/bin/run generate-all -d $CODENAME
 
-        lunch $CODENAME-cur-user
+        for device in $${devices[@]}; do
+          # must clean out/ between each device
+          rm -rf out/
 
-        if [[ "$CODENAME" =~ ^(oriole|raven|bluejay)$ ]]; then
-          m vendorbootimage target-files-package 
-        else
-          #NOTE: this is currently correct for pixel 7 and newer. its possible newer devices will require different targets
-          m vendorbootimage vendorkernelbootimage target-files-package
+          if rg -m1 "$TAG" $${device}_built_tags ; then
+            echo "already built $TAG for $device, not rebuilding"
+            continue
+          fi
+
+          ./vendor/adevtool/bin/run generate-all -d $CODENAME
+
+          lunch $device-cur-user
+
+          if [[ "$device" =~ ^(oriole|raven|bluejay)$ ]]; then
+            m vendorbootimage target-files-package otatools-package
+          else
+            #NOTE: this is currently correct for pixel 7 and newer. its possible newer devices will require different targets
+            m vendorbootimage vendorkernelbootimage target-files-package otatools-package
+          fi
+          script/finalize.sh
+
+        done
+        
+        echo $TAG > out/tag.txt
+        echo "building complete"
+      '';
+
+    signGrapheneOS-unwrapped =
+      writeBashInteractiveBin "signGrapheneOS-unwrapped" ''
+        set -xe
+
+        if [ -z "$1" ]; then
+          echo "Usage: ./signGrapheneOS.sh <device codename>"
+          echo "the codename aka build target for devices can be found here https://grapheneos.org/build#build-targets"
+          exit 1
         fi
 
-        m otatools-package
-        script/finalize.sh
-        echo "building complete"
+        WORKDIR=$(pwd)
+        TAG=$(cat out/tag.txt)
+        CODENAME=$1
+
+        if [ ! -d "$WORKDIR/keys/$CODENAME" ]; then
+          echo "keys dir $WORKDIR/keys/$CODENAME does not exist"
+          exit 1
+        fi
+
+        if rg -m1 "$TAG" $CODENAME_built_tags ; then
+          echo "already signed $TAG for $CODENAME, not signing new build"
+          exit 0
+        fi
+
+        cd grapheneos
 
         mkdir -p keys/
         cp -a $WORKDIR/keys/$CODENAME keys/

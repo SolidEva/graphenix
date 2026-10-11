@@ -11,12 +11,13 @@ pkgs.stdenv.mkDerivation {
     (env.androidFHS {
       commandPkg = pkgs.bashInteractive;
       command = "bash";
+      name = "bashandroidFHS";
     })
     (build.buildGrapheneOS)
     (build.latestRelease)
   ];
   shellHook = ''
     echo "run buildGrapheneOS to build images"
-    exec androidFHSbash
+    exec bashandroidFHS
   '';
 }
