@@ -189,7 +189,11 @@ rec {
         rm keys/$CODENAME/id_ed25519
 
         script/generate-release.sh $CODENAME $BUILD_NUMBER
-        echo "signed images available in grapheneos/releases/$BUILD_NUMBER/release-$CODENAME-$BUILD_NUMBER"
+
+        mkdir -p $WORKDIR/releases/
+        mv releases/* $WORKDIR/releases/
+
+        echo "signed images available in $WORKDIR/releases/$BUILD_NUMBER/release-$CODENAME-$BUILD_NUMBER"
 
         echo "Completed build of GrapheneOS $TAG for $CODENAME"
         echo "$TAG" >> $WORKDIR/$\{CODENAME\}_built_tags
