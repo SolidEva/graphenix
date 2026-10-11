@@ -8,18 +8,19 @@ let
   cfg = config.services.graphenix;
   defaultUserGroup = "graphenix";
 
-  buildGrapheneOSFHS = (import ../build.nix).buildGrapheneOSFHS;
-  signGrapheneOSFHS = (import ../build.nix).signGrapheneOSFHS;
-  latestRelease = (import ../build.nix).latestRelease;
+  buildGrapheneOSandroidFHS = (import ../build.nix { inherit pkgs; }).buildGrapheneOSandroidFHS;
+  signGrapheneOSandroidFHS = (import ../build.nix { inherit pkgs; }).signGrapheneOSandroidFHS;
+  latestRelease = (import ../build.nix { inherit pkgs; }).latestRelease;
+
   buildScript = pkgs.writeShellScript "buildScript" ''
     if [ -z "$1" ]; then
       echo "Usage: ./buildScript.sh <device codename>"
       echo "the codename aka build target for devices can be found here https://grapheneos.org/build#build-targets"
       exit 1
     fi
-    release=$(${latestRelease} --codename $1)
+    release=$(${lib.getExe latestRelease} --codename $1)
     echo "found release $release for device $1"
-    ${buildGrapheneOSFHS} $1 $release $2
+    ${buildGrapheneOSandroidFHS} $1 $release $2
   '';
 in
 
@@ -49,7 +50,7 @@ in
     };
 
     dataDir = lib.mkOption {
-      type = builtins.path;
+      type = lib.types.path;
       description = ''
         Directory to checkout grapheneos and build in.
         Signing keys are expected to be inside this directory:
@@ -72,11 +73,11 @@ in
 
     devices = lib.mkOption {
       description = "Set of devices to build for, the name should be the codename of the device";
-      type = lib.attrsOf (
+      type = lib.types.attrsOf (
         lib.types.submodule {
           options = {
             signingKeysPasswordFile = lib.mkOption {
-              type = builtins.path;
+              type = lib.types.path;
               description = ''
                 file containing the signing key password, used to decrypt the signing keys to sign the build. Should usually be a sops or age path.
               '';
@@ -88,7 +89,7 @@ in
     };
 
     updateServerHostname = lib.mkOption {
-      type = lib.types.str;
+      type = lib.types.nullOr lib.types.str;
       default = null;
       description = ''
         The hostname of the update server to set `packages/apps/Updater/res/values/config.xml`.
@@ -114,134 +115,137 @@ in
       ${cfg.group} = { };
     };
 
-    systemd.services.graphenix-build =  {
-      description = "graphenix: GrapheneOS auto builder";
-      wantedBy = [
-        "graphenix.target"
-      ];
-      serviceConfig = {
-        Type = "exec";
-        User = cfg.user;
-        Group = cfg.group;
-        Restart = "no";
+    systemd = {
+      services = {
+        graphenix-build =  {
+          description = "graphenix: GrapheneOS auto builder";
+          wantedBy = [
+            "graphenix.target"
+          ];
+          serviceConfig = {
+            Type = "exec";
+            User = cfg.user;
+            Group = cfg.group;
+            Restart = "no";
 
-        WorkingDirectory = cfg.dataDir;
-        ExecStart = (
-          lib.strings.join " " (
-            [
-              buildScript
-            ]
-            + lib.string.join "," (builtins.attrNames cfg.devices)
-            + lib.optionals (cfg.updateServerHostname != null) [ cfg.updateServerHostname ]
-          )
-        );
+            WorkingDirectory = cfg.dataDir;
+            ExecStart = (
+              builtins.concatStringsSep " " (
+                [
+                  buildScript
+                  (builtins.concatStringsSep "," (builtins.attrNames cfg.devices))
+                ]
+                ++ lib.optionals (cfg.updateServerHostname != null) [ cfg.updateServerHostname ]
+              )
+            );
 
-        # Security options:
-        NoNewPrivileges = true;
-        CapabilityBoundingSet = [ "" ];
-        SystemCallArchitectures = "native";
-        RestrictAddressFamilies = [
-          "AF_UNIX"
-          "AF_INET"
-          "AF_INET6"
-        ];
-        RestrictNamespaces = true;
-        RestrictRealtime = true;
-        RestrictSUIDSGID = true;
-        ProcSubset = "pid";
-        ProtectControlGroups = true;
-        ProtectClock = true;
-        ProtectHostname = true;
-        ProtectKernelLogs = true;
-        ProtectKernelModules = true;
-        ProtectKernelTunables = true;
-        ProtectProc = "invisible";
-        ProtectSystem = true;
-        LockPersonality = true;
-        PrivateTmp = true;
-        PrivateUsers = true;
-        RemoveIPC = true;
+            # Security options:
+            NoNewPrivileges = true;
+            CapabilityBoundingSet = [ "" ];
+            SystemCallArchitectures = "native";
+            RestrictAddressFamilies = [
+              "AF_UNIX"
+              "AF_INET"
+              "AF_INET6"
+            ];
+            RestrictNamespaces = true;
+            RestrictRealtime = true;
+            RestrictSUIDSGID = true;
+            ProcSubset = "pid";
+            ProtectControlGroups = true;
+            ProtectClock = true;
+            ProtectHostname = true;
+            ProtectKernelLogs = true;
+            ProtectKernelModules = true;
+            ProtectKernelTunables = true;
+            ProtectProc = "invisible";
+            ProtectSystem = true;
+            LockPersonality = true;
+            PrivateTmp = true;
+            PrivateUsers = true;
+            RemoveIPC = true;
+          };
+        };
+      } //
+      lib.mapAttrs' (name: devicecfg: {
+        name = "graphenix-sign-${name}";
+        value = {
+          description = "graphenix: GrapheneOS auto builder";
+          after = [ "graphenix-build.service" ];
+          requires = [ "graphenix-build.service" ];
+          wantedBy = [
+            "graphenix.target"
+          ];
+          serviceConfig = {
+            Type = "exec";
+            User = cfg.user;
+            Group = cfg.group;
+            Restart = "no";
+
+            WorkingDirectory = cfg.dataDir;
+            LoadCredential = [ "signingkeyspassword:${devicecfg.signingKeysPasswordFile}" ];
+            ExecStart = (
+              lib.strings.join " "
+                [
+                  signGrapheneOSandroidFHS
+                  name
+                ]
+            );
+
+            # limit the grapheneos signing to run 4 at a time
+            Slice = "graphenix.slice";
+
+            # Security options:
+            NoNewPrivileges = true;
+            CapabilityBoundingSet = [ "" ];
+            SystemCallArchitectures = "native";
+            RestrictAddressFamilies = [
+              "AF_UNIX"
+              "AF_INET"
+              "AF_INET6"
+            ];
+            RestrictNamespaces = true;
+            RestrictRealtime = true;
+            RestrictSUIDSGID = true;
+            ProcSubset = "pid";
+            ProtectControlGroups = true;
+            ProtectClock = true;
+            ProtectHostname = true;
+            ProtectKernelLogs = true;
+            ProtectKernelModules = true;
+            ProtectKernelTunables = true;
+            ProtectProc = "invisible";
+            ProtectSystem = true;
+            LockPersonality = true;
+            PrivateTmp = true;
+            PrivateUsers = true;
+            RemoveIPC = true;
+          };
+        };
+      }) cfg.devices;
+    };
+
+    # concept to start all jobs serially borrowed from https://unix.stackexchange.com/questions/806565/how-do-i-start-multiple-systemd-services-on-the-same-schedule-but-run-each-one-s
+    systemd.timers.graphenix = {
+      description = "Timer to check for new grapheneos releases and start builds for all devices";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        Unit = "graphenix.target";
+        OnCalendar = cfg.onCalendar;
+        AccuracySec = "10min";
+        Persistent = true;
       };
     };
-  };
 
-  systemd.services = pkgs.mapAttrs' (name: devicecfg: {
-    name = "graphenix-sign-${name}";
-    value = {
-      description = "graphenix: GrapheneOS auto builder";
-      after = [ "graphenix-build.service" ];
-      requires = [ "graphenix-build.service" ];
-      wantedBy = [
-        "graphenix.target"
-      ];
-      serviceConfig = {
-        Type = "exec";
-        User = cfg.user;
-        Group = cfg.group;
-        Restart = "no";
+    systemd.targets.graphenix = {
+      description = "dummy target for the timer, allows the actual jobs to get triggered as well";
+    };
 
-        WorkingDirectory = cfg.dataDir;
-        LoadCredential = [ "signingkeyspassword:${devicecfg.signingKeyPasswordFile}" ];
-        ExecStart = (
-          lib.strings.join " "
-            [
-              signGrapheneOSFHS
-              name
-            ]
-        );
-
-        # limit the grapheneos signing to run 4 at a time
-        Slice = "graphenix.slice";
-
-        # Security options:
-        NoNewPrivileges = true;
-        CapabilityBoundingSet = [ "" ];
-        SystemCallArchitectures = "native";
-        RestrictAddressFamilies = [
-          "AF_UNIX"
-          "AF_INET"
-          "AF_INET6"
-        ];
-        RestrictNamespaces = true;
-        RestrictRealtime = true;
-        RestrictSUIDSGID = true;
-        ProcSubset = "pid";
-        ProtectControlGroups = true;
-        ProtectClock = true;
-        ProtectHostname = true;
-        ProtectKernelLogs = true;
-        ProtectKernelModules = true;
-        ProtectKernelTunables = true;
-        ProtectProc = "invisible";
-        ProtectSystem = true;
-        LockPersonality = true;
-        PrivateTmp = true;
-        PrivateUsers = true;
-        RemoveIPC = true;
+    systemd.slices.graphenix = {
+      description = "limit number of signing jobs";
+      sliceConfig = {
+        ConcurrencySoftMax = 4;
       };
-    };
-  }) cfg.devices;
-
-  # concept to start all jobs serially borrowed from https://unix.stackexchange.com/questions/806565/how-do-i-start-multiple-systemd-services-on-the-same-schedule-but-run-each-one-s
-  systemd.timers.graphenix = {
-    description = "Timer to check for new grapheneos releases and start builds for all devices";
-    wantedBy = [ "timers.target" ];
-    timerConfig = {
-      Unit = "graphenix.target";
-      OnCalendar = cfg.onCalendar;
-      AccuracySec = "10min";
-      Persistent = true;
-    };
-  };
-
-  systemd.targets.graphenix = {
-    description = "dummy target for the timer, allows the actual jobs to get triggered as well";
-  };
-
-  systemd.slices.graphenix = {
-    description = "limit number of signing jobs";
-    sliceConfig = {
-      ConcurrencySoftMax = 4;
     };
   };
 }

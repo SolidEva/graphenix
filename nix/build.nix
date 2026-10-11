@@ -24,7 +24,7 @@ let
 in
 rec {
 
-    latestRelease = pkgs.writers.writePython3Bin "latest" {
+    latestRelease = (pkgs.writers.writePython3Bin "latestRelease" {
       libraries = [ pkgs.python3Packages.requests pkgs.python3Packages.click pkgs.python3Packages.feedparser ];
     } ''
       import requests
@@ -63,7 +63,7 @@ rec {
 
       if __name__ == '__main__':
           run()
-    '';
+    '');
 
     buildGrapheneOS =
       pkgs.writeShellApplication {
