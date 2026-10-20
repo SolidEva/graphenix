@@ -216,7 +216,7 @@ rec {
         fi
 
         WORKDIR=$(pwd)
-        TAG=$(cat out/tag.txt)
+        TAG=$(cat grapheneos/out/tag.txt)
         CODENAME=$1
 
         if [ ! -d "$WORKDIR/keys/$CODENAME" ]; then
