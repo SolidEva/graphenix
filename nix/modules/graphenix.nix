@@ -22,6 +22,7 @@ let
     release=$(${lib.getExe latestRelease} --codename $1)
     echo "found release $release for device $1"
     ${lib.getExe buildGrapheneOSandroidFHS} $1 $release $2
+    ${lib.getExe signGrapheneOSandroidFHS} $1
   '';
 in
 
