@@ -131,6 +131,7 @@ in
             "graphenix.target"
           ];
           before = [ "graphenix-sign.target" ];
+          onSuccess = [ "graphenix-sign.target" ];
           environment = {
             HOME = cfg.dataDir;
           };
@@ -248,6 +249,7 @@ in
 
     systemd.targets.graphenix-sign = {
       description = "dummy target to indicate the signing jobs can start";
+      after = [ "graphenix-build.service" ];
     };
 
     systemd.slices.graphenix = {
