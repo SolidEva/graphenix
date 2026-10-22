@@ -113,9 +113,6 @@ rec {
       writeBashInteractiveBin "buildGrapheneOS-unwrapped" ''
         set -xe
 
-        #TODO remove
-        exit 0
-
         if [ -z "$1" ]; then
           echo "Usage: ./buildGrapheneOS.sh <comma seperated device codenames (ex: tokay,caiman,oriale )> <grapheneos-release-tag-name> [optional update server hostname]"
           echo "the codename aka build target for devices can be found here https://grapheneos.org/build#build-targets"
@@ -255,8 +252,8 @@ rec {
 
         script/generate-release.sh $CODENAME $BUILD_NUMBER
 
-        mkdir -p $WORKDIR/releases/
-        mv releases/* $WORKDIR/releases/
+        mkdir -p $WORKDIR/releases/$BUILD_NUMBER/
+        mv releases/$BUILD_NUMBER/release-''${CODENAME}-''${BUILD_NUMBER} $WORKDIR/releases/$BUILD_NUMBER/
 
         echo "signed images available in $WORKDIR/releases/$BUILD_NUMBER/release-$CODENAME-$BUILD_NUMBER"
 
