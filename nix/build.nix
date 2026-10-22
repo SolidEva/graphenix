@@ -113,6 +113,9 @@ rec {
       writeBashInteractiveBin "buildGrapheneOS-unwrapped" ''
         set -xe
 
+        #TODO remove
+        exit 0
+
         if [ -z "$1" ]; then
           echo "Usage: ./buildGrapheneOS.sh <comma seperated device codenames (ex: tokay,caiman,oriale )> <grapheneos-release-tag-name> [optional update server hostname]"
           echo "the codename aka build target for devices can be found here https://grapheneos.org/build#build-targets"
