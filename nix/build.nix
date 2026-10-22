@@ -227,7 +227,7 @@ rec {
           exit 1
         fi
 
-        if ${pkgs.ripgrep}/bin/rg -m1 "$TAG" $CODENAME_built_tags ; then
+        if ${pkgs.ripgrep}/bin/rg -m1 "$TAG" ''${CODENAME}_built_tags ; then
           echo "already signed $TAG for $CODENAME, not signing new build"
           exit 0
         fi
@@ -261,7 +261,7 @@ rec {
         echo "signed images available in $WORKDIR/releases/$BUILD_NUMBER/release-$CODENAME-$BUILD_NUMBER"
 
         echo "Completed build of GrapheneOS $TAG for $CODENAME"
-        echo "$TAG" >> $WORKDIR/$\{CODENAME\}_built_tags
+        echo "$TAG" >> $WORKDIR/''${CODENAME}_built_tags
       '';
   
 }
