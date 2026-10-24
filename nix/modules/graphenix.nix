@@ -117,7 +117,7 @@ in
     systemd = {
       tmpfiles.settings.graphenixBuildDirs = {
         "${cfg.dataDir}"."e" = {
-          mode = "700";
+          mode = "750";
           inherit (cfg) user group;
         };
       };
