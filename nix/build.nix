@@ -259,6 +259,13 @@ rec {
 
         echo "Completed build of GrapheneOS $TAG for $CODENAME"
         echo "$TAG" >> $WORKDIR/''${CODENAME}_built_tags
+
+        cd $WORKDIR
+        mkdir -p update_server
+
+        cp -a releases/''${BUILD_NUMBER}/release-*-''${BUILD_NUMBER}/*-ota_update-''${BUILD_NUMBER}.zip update_server/
+        cp -a releases/''${BUILD_NUMBER}/release-*-''${BUILD_NUMBER}/*-factory-''${BUILD_NUMBER}.zip update_server/
+        cp -a releases/''${BUILD_NUMBER}/release-*-''${BUILD_NUMBER}/*-stable update_server/
+        echo "Moved $BUILD_NUMBER to update server directory"
       '';
-  
 }
