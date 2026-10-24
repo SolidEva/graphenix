@@ -27,8 +27,6 @@ in
 
 {
 
-  # TODO setup service to serve the updates for the updater app
-
   options.services.graphenix = {
     enable = lib.mkEnableOption ''
       Service to automatically build new GrapheneOS releases for multiple devices.

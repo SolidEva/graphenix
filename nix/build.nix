@@ -183,7 +183,7 @@ rec {
           # must clean out/ between each device
           rm -rf out/
 
-          if ${pkgs.ripgrep}/bin/rg -m1 "$TAG" ''${device}_built_tags ; then
+          if ${pkgs.ripgrep}/bin/rg -m1 "$TAG" ''${WORKDIR}/''${device}_built_tags ; then
             echo "already built $TAG for $device, not rebuilding"
             continue
           fi
