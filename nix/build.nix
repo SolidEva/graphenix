@@ -109,6 +109,12 @@ rec {
                               name = "signGrapheneOSandroidFHS";
                           });
 
+    cloneGrapheneOSandroidFHS = (env.androidFHS {
+                              commandPkg = cloneGrapheneOS-unwrapped;
+                              command = ''cloneGrapheneOS-unwrapped'';
+                              name = "cloneGrapheneOSandroidFHS";
+                          });
+
     buildGrapheneOS-unwrapped = 
       writeBashInteractiveBin "buildGrapheneOS-unwrapped" ''
         set -xe
@@ -268,4 +274,36 @@ rec {
         cp -a releases/''${BUILD_NUMBER}/release-*-''${BUILD_NUMBER}/*-stable update_server/
         echo "Moved $BUILD_NUMBER to update server directory"
       '';
+
+    cloneGrapheneOS-unwrapped = 
+      writeBashInteractiveBin "cloneGrapheneOS-unwrapped" ''
+        set -xe
+
+        if [ -z "$1" ]; then
+          echo "Usage: ./cloneGrapheneOS.sh <grapheneos-release-tag-name>"
+          echo "the tags can be found here https://grapheneos.org/releases"
+          exit 1
+        fi
+
+        TAG=$1
+        WORKDIR=$(pwd)
+
+        mkdir -p grapheneos
+        cd grapheneos
+
+        # must clean out/ between each device
+        rm -rf out/
+
+        repo init -u https://github.com/GrapheneOS/platform_manifest.git -b refs/tags/$TAG
+
+        cd .repo/manifests
+        git config gpg.ssh.allowedSignersFile ${allowed_signers}
+        git verify-tag $(git describe)
+        cd ../..
+
+        repo sync -j8 --force-sync
+
+        echo "repo at tag $TAG cloned and synced"
+      '';
+
 }

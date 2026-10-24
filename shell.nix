@@ -14,6 +14,7 @@ pkgs.stdenv.mkDerivation {
       name = "bashandroidFHS";
     })
     (build.buildGrapheneOS)
+    (build.cloneGrapheneOS)
     (build.latestRelease)
   ];
   shellHook = ''
