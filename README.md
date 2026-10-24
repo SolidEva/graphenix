@@ -44,8 +44,8 @@ in the working dir, create a `keys` directory with each device your would like t
 keys can be created by following https://grapheneos.org/build#generating-release-signing-keys
 
 *NOTE* as noted in the grapheneos release singing keys generation instructions:
-    * each device should use a unique password for its keys, do not re-use passwords between devices.
-    * all keys for a device should use the same password, so that signing automation only needs a single password.
+  * each device should use a unique password for its keys, do not re-use passwords between devices.
+  * all keys for a device should use the same password, so that signing automation only needs a single password.
   
 if you need an environment to generate keys, you can use the build environment to clone the repos. instructions for manual usage of the build env are below.
 
@@ -65,11 +65,11 @@ once you have your keys, the working dir should now look something like this:
 
 
 by default, this will check for new releases daily. when a new release is found, it will build and sign images for all devices in `services.graphenix.devices`.
-    * sources will be checked out in `${services.graphenix.dataDir}/grapheneos`
-    * all of the release files are in `${services.graphenix.dataDir}/releases`.
-    * files for your update server are in `${services.graphenix.dataDir}/update_server`
-        * these files can be copied directly to the root of a simple webserver, serving `${services.graphenix.updateServerHostname}`
-    * the list of built tags are in `${services.graphenix.dataDir}/<device-codename>_built_tags`, this is how the automation knows which tags have been built
+  * sources will be checked out in `${services.graphenix.dataDir}/grapheneos`
+  * all of the release files are in `${services.graphenix.dataDir}/releases`.
+  * files for your update server are in `${services.graphenix.dataDir}/update_server`
+    * these files can be copied directly to the root of a simple webserver, serving `${services.graphenix.updateServerHostname}`
+  * the list of built tags are in `${services.graphenix.dataDir}/<device-codename>_built_tags`, this is how the automation knows which tags have been built
 
 ## example update server configuration
 
