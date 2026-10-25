@@ -153,6 +153,20 @@ rec {
           fi
         done
 
+        # only continue cloning if at least one device has not already built
+        MUST_BUILD=false
+        for device in ''${devices[@]}; do
+          if ! ${pkgs.ripgrep}/bin/rg -m1 "$TAG" ''${WORKDIR}/''${device}_built_tags ; then
+            echo "must build $TAG for at least $device"
+            MUST_BUILD=true
+            break
+          fi
+        done
+        if ! $MUST_BUILD; then
+            echo "already built $TAG for all devices, not cloning and building"
+            exit 0
+        fi
+
         mkdir -p grapheneos
         cd grapheneos
 
